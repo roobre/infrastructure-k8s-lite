@@ -51,8 +51,8 @@ jobs:
           sed -i "s/interval: 15/interval: 30/" nri-kubernetes-definition.yml
           go mod download
           make compile
-          docker build . --squash -t $IMAGE
-          docker build . --squash -t $IMAGE-unprivileged --build-arg 'MODE=unprivileged'
+          docker build . -t $IMAGE
+          docker build . -t $IMAGE-unprivileged --build-arg 'MODE=unprivileged'
       - name: Upload docker images
         run: |
           docker push $IMAGE
