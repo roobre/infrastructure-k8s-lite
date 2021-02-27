@@ -7,11 +7,14 @@ on:
     - cron: "0 3 * * *"
 
 jobs:
-  publish-latest:
+  patch-latest:
     name: Build & publish latest
     runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        tag: [ latest, latest-unprivileged ]
     env:
-      IMAGE: roobre/infrastructure-k8s-lite:latest
+      IMAGE: roobre/infrastructure-k8s-lite
     steps:
       - uses: actions/checkout@v2
       - uses: docker/login-action@v1
@@ -20,12 +23,12 @@ jobs:
           password: ${{ secrets.DOCKERHUB_TOKEN }}
       - name: Build docker image
         run: |
-          docker build . -t $IMAGE
+          docker build . -t ${IMAGE}:${{ matrix.tag }} --build-arg UPST_TAG=${{ matrix.tag }}
       - name: Upload docker images
         run: |
-          docker push $IMAGE
+          docker push ${IMAGE}:${{ matrix.tag }}
 
-  publish-master:
+  patch-master:
     name: Build & publish master from sources
     runs-on: ubuntu-latest
     env:
@@ -38,6 +41,9 @@ jobs:
       - name: Clone upstream repo
         run: |
           git clone https://github.com/newrelic/nri-kubernetes
+      - name: Patch definition
+        run: |
+          cp nri-kubernetes-definition.yml nri-kubernetes/
       - uses: docker/login-action@v1
         with:
           username: roobre
@@ -47,8 +53,8 @@ jobs:
         env:
           GOOS: linux
           GOARCH: amd64
+          DOCKER_BUILDKIT: '1'
         run: |
-          sed -i "s/interval: 15/interval: 30/" nri-kubernetes-definition.yml
           go mod download
           make compile
           docker build . -t $IMAGE
